@@ -1,101 +1,118 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import axios from "axios";
 import "./Translator.css";
 
-function Translator() {
-  const [inputXml, setInputXml] = useState("");
-  const [inputXsd, setInputXsd] = useState("");
-  const [oasSpec, setOasSpec] = useState("");
-  const [outputXml, setOutputXml] = useState("");
-  const [loading, setLoading] = useState(false);
+export default function Translator() {
+    const [jsonSchema, setJsonSchema] = useState("");
+    const [xmlXsd, setXmlXsd] = useState("");
+    const [mapping, setMapping] = useState("");
+    const [inputXml, setInputXml] = useState("");
+    const [outputXml, setOutputXml] = useState("");
+    const [loading, setLoading] = useState(false);
 
-  const handleTransformWithXsd = async () => {
-    setLoading(true);
-    try {
-      //using github codespaces generated URL
-      const response = await fetch("https://organic-giggle-vpv65ggv6v5fx7jq-5000.app.github.dev/transform-with-xsd", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ inputXml, inputXsd }),
-      });
+    const generateMapping = async () => {
+        if (!jsonSchema || !xmlXsd) {
+            alert("Please enter both JSON Schema and XML XSD.");
+            return;
+        }
 
-      const data = await response.json();
-      setOutputXml(data.transformedXml || "Error occurred");
-    } catch (err) {
-      setOutputXml("Error connecting to backend");
-    }
-    setLoading(false);
-  };
+        setLoading(true);
+        try {
+            const response = await axios.post("https://organic-giggle-vpv65ggv6v5fx7jq-5000.app.github.dev/generate-mapping", {
+                jsonSchema,
+                xmlXsd
+            });
 
-  const handleTransformWithOas = async () => {
-    setLoading(true);
-    try {
-      //using github codespace genrated URL 
-      const response = await fetch("https://organic-giggle-vpv65ggv6v5fx7jq-5000.app.github.dev/transform-using-oas", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ inputXml, oasSpec }),
-      });
+            setMapping(response.data.mapping);
+        } catch (err) {
+            console.error(err);
+            alert("Invalid JSON Schema or XML XSD");
+        }
+        setLoading(false);
+    };
 
-      const data = await response.json();
-      setOutputXml(data.transformedXml || "Error occurred");
-    } catch (err) {
-      setOutputXml("Error connecting to backend");
-    }
-    setLoading(false);
-  };
+    const transformXml = async () => {
+        if (!inputXml || !mapping || !xmlXsd) {
+            alert("Please provide Input XML, Mapping JSON, and XML XSD.");
+            return;
+        }
 
-  return (
-    <div>
-      <h1 className="title">XSD Translator</h1>
-      <div className="container">
-        <div className="grid">
-          <div className="box">
-            <h3>Input XML</h3>
-            <textarea
-              value={inputXml}
-              onChange={(e) => setInputXml(e.target.value)}
-              placeholder="Paste XML here..."
-            />
-          </div>
+        setLoading(true);
+        try {
+            const response = await axios.post("https://organic-giggle-vpv65ggv6v5fx7jq-5000.app.github.dev/transform-xml", {
+                inputXml,
+                mappingJson: mapping,
+                xmlXsd
+            });
 
-          <div className="box">
-            <h3>Input XSD</h3>
-            <textarea
-              value={inputXsd}
-              onChange={(e) => setInputXsd(e.target.value)}
-              placeholder="Paste XSD here..."
-            />
-          </div>
+            setOutputXml(response.data);
+        } catch (err) {
+            alert("Invalid XML structure");
+        }
+        setLoading(false);
+    };
 
-          <div className="box">
-            <h3>Input OAS Spec</h3>
-            <textarea
-              value={oasSpec}
-              onChange={(e) => setOasSpec(e.target.value)}
-              placeholder="Paste OAS YAML here..."
-            />
-          </div>
+    return (
+        <div>
+            <h2 className="heading">Mapping Template Generation</h2>
+            <div className="translator-container">
+                <div className="row-two-cols">
+                    <div className="box">
+                        <h3>JSON Schema</h3>
+                        <textarea
+                            value={jsonSchema}
+                            onChange={(e) => setJsonSchema(e.target.value)}
+                            placeholder="Paste JSON Schema..."
+                        />
+                    </div>
 
-          <div className="box">
-            <h3>Output XML</h3>
-            <textarea value={outputXml} readOnly />
-          </div>
+                    <div className="box">
+                        <h3>XML XSD</h3>
+                        <textarea
+                            value={xmlXsd}
+                            onChange={(e) => setXmlXsd(e.target.value)}
+                            placeholder="Paste XML XSD..."
+                        />
+                    </div>
+                </div>
+
+                <div className="button-row">
+                    <button disabled={loading} onClick={generateMapping}>
+                        {loading ? "Generating..." : "Generate Mapping Template"}
+                    </button>
+                </div>
+
+                <div className="row-two-cols">
+                    <div className="box">
+                        <h3>Mapping Template</h3>
+                        <textarea
+                            value={mapping}
+                            onChange={(e) => setMapping(e.target.value)}
+                            placeholder="Mapping Template will appear here..."
+                        />
+                    </div>
+
+                    <div className="box">
+                        <h3>Quote Details</h3>
+                        <textarea
+                            value={inputXml}
+                            onChange={(e) => setInputXml(e.target.value)}
+                            placeholder="Paste your Quote Details here..."
+                        />
+                    </div>
+                </div>
+
+                <div className="button-row">
+                    <button disabled={loading} onClick={transformXml}>
+                        {loading ? "Generating..." : "Generate Quote Request"}
+                    </button>
+                </div>
+
+                <div className="output-box">
+                    <h3>Quote Request</h3>
+                    <textarea value={outputXml} readOnly placeholder="Quote Request will appear here..." />
+                </div>
+            </div>
         </div>
-
-        <div className="buttons">
-          <button onClick={handleTransformWithXsd} disabled={loading}>
-            Transform with XSD
-          </button>
-
-          <button onClick={handleTransformWithOas} disabled={loading}>
-            Transform with OAS
-          </button>
-        </div>
-
-        {loading && <p className="loading">Transforming...</p>}
-      </div>
-    </div>
-  );
+    );
 }
-
-export default Translator;
